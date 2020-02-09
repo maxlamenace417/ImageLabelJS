@@ -34,6 +34,14 @@ var mode_DELETE = "DELETE";
 var selectedMask_index = -1;
 var selectedBbox_index = -1;
 
+var modifying_point = false;
+var pointToModify_Bbox = "";
+var pointIndex_Mask=-1;
+var modify_TopLeft = "TOPLEFT";
+var modify_TopRight = "TOPRIGHT";
+var modify_BotLeft = "BOTLEFT";
+var modify_BotRight = "BOTRIGHT";
+
 var configs=[];
 
 function reinit(){
@@ -71,11 +79,21 @@ canvas.onmouseup = function(e){
 			}
 		}
 	}
+	if(GetCurrentMode()==mode_DELETE){
+		if(pointToModify_Bbox!="" && modifying_point && selectedBbox_index!=-1){
+			pointToModify_Bbox="";
+			modifying_point=false;
+		}
+		if(pointIndex_Mask!=-1 && modifying_point && selectedMask_index!=-1){
+			pointIndex_Mask=-1;
+			modifying_point=false;
+		}
+	}	
+	ActualizeDrawing(e);
 }
 canvas.onmousemove = function (e) {
 	if(GetCurrentMode()==mode_ANNOTATION){
-		if(configs.length>0){
-			ActualizeDrawing(e);
+		if(configs.length>0 && current_name!=""){
 			if(GetCurrentAnnotationType()==type_BBOX){
 				if(isMouseDown){
 					var loc = windowToCanvas(canvas, e.clientX, e.clientY);
@@ -97,19 +115,297 @@ canvas.onmousemove = function (e) {
 						current_bbox_H = mouseMove_Y - mouseDown_Y;
 						current_bbox_Y = mouseDown_Y;
 					}
-				}
+				}				
+				ActualizeDrawing(e);
 			}
 		}
 	}
 	if(GetCurrentMode()==mode_DELETE){
 		if(configs.length>0){
+			if(modifying_point && selectedMask_index!=-1 && pointIndex_Mask!=-1){
+				var loc = windowToCanvas(canvas, e.clientX, e.clientY);
+				if(pointIndex_Mask==0 || pointIndex_Mask==masks[selectedMask_index][2].length-1){
+					masks[selectedMask_index][2][0]=loc.x;
+					masks[selectedMask_index][3][0]=loc.y;
+					masks[selectedMask_index][2][masks[selectedMask_index][2].length-1]=loc.x;
+					masks[selectedMask_index][3][masks[selectedMask_index][2].length-1]=loc.y;
+				}else{
+					masks[selectedMask_index][2][pointIndex_Mask]=loc.x;
+					masks[selectedMask_index][3][pointIndex_Mask]=loc.y;
+				}
+			}
+			if(pointToModify_Bbox!="" && modifying_point && selectedBbox_index!=-1){
+				var loc = windowToCanvas(canvas, e.clientX, e.clientY);
+				var modifDone = false;					
+				var old_X = bboxs[selectedBbox_index][2];
+				var old_Y = bboxs[selectedBbox_index][3];
+				var old_W = bboxs[selectedBbox_index][4];
+				var old_H = bboxs[selectedBbox_index][5];		
+				if(pointToModify_Bbox==modify_TopLeft && !modifDone){		
+					if(loc.x<bboxs[selectedBbox_index][2]){
+						if(loc.y<bboxs[selectedBbox_index][3]){
+							bboxs[selectedBbox_index][2] = loc.x;
+							bboxs[selectedBbox_index][3] = loc.y;
+							bboxs[selectedBbox_index][4] = old_W + (old_X-loc.x);
+							bboxs[selectedBbox_index][5] = old_H + (old_Y-loc.y);
+							pointToModify_Bbox = modify_TopLeft;
+						}else if(loc.y>=bboxs[selectedBbox_index][3] && loc.y<bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = loc.x;
+							bboxs[selectedBbox_index][3] = loc.y;
+							bboxs[selectedBbox_index][4] = old_W + (old_X-loc.x);
+							bboxs[selectedBbox_index][5] = old_Y+old_H-loc.y;
+							pointToModify_Bbox = modify_TopLeft;
+						}else if(loc.y>=bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = loc.x;
+							bboxs[selectedBbox_index][3] = old_Y + old_H;
+							bboxs[selectedBbox_index][4] = old_W-(loc.x-old_X);
+							bboxs[selectedBbox_index][5] = loc.y-(old_Y + old_H);
+							pointToModify_Bbox = modify_BotLeft;
+						}
+					}else if(loc.x>=bboxs[selectedBbox_index][2] && loc.x<bboxs[selectedBbox_index][2]+bboxs[selectedBbox_index][4]){
+						if(loc.y<bboxs[selectedBbox_index][3]){
+							bboxs[selectedBbox_index][2] = loc.x;
+							bboxs[selectedBbox_index][3] = loc.y;
+							bboxs[selectedBbox_index][4] = old_X+old_W-loc.x;
+							bboxs[selectedBbox_index][5] = old_H + (old_Y-loc.y);
+							pointToModify_Bbox = modify_TopLeft;
+						}else if(loc.y>=bboxs[selectedBbox_index][3] && loc.y<bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = loc.x;
+							bboxs[selectedBbox_index][3] = loc.y;
+							bboxs[selectedBbox_index][4] = old_W-(loc.x-old_X);
+							bboxs[selectedBbox_index][5] = old_Y+old_H-loc.y;
+							pointToModify_Bbox = modify_TopLeft;
+						}else if(loc.y>=bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = loc.x;
+							bboxs[selectedBbox_index][3] = old_Y + old_H;
+							bboxs[selectedBbox_index][4] = old_W-(loc.x-old_X);
+							bboxs[selectedBbox_index][5] = loc.y-(old_Y + old_H);
+							pointToModify_Bbox = modify_BotLeft;
+						}
+					}else if(loc.x>=bboxs[selectedBbox_index][2]+bboxs[selectedBbox_index][4]){
+						if(loc.y<bboxs[selectedBbox_index][3]){
+							bboxs[selectedBbox_index][2] = old_X+old_W;
+							bboxs[selectedBbox_index][3] = loc.y;
+							bboxs[selectedBbox_index][4] = loc.x-old_X+old_W;
+							bboxs[selectedBbox_index][5] = old_H + (old_Y-loc.y);
+							pointToModify_Bbox = modify_TopRight;
+						}else if(loc.y>=bboxs[selectedBbox_index][3] && loc.y<bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = old_X+old_W;
+							bboxs[selectedBbox_index][3] = loc.y;
+							bboxs[selectedBbox_index][4] = loc.x-old_X+old_W;
+							bboxs[selectedBbox_index][5] = old_Y+old_H-loc.y;
+							pointToModify_Bbox = modify_TopRight;
+						}else if(loc.y>=bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = old_X+old_W;
+							bboxs[selectedBbox_index][3] = old_Y+old_H;
+							bboxs[selectedBbox_index][4] = loc.x-old_X+old_W;
+							bboxs[selectedBbox_index][5] = loc.y-bboxs[selectedBbox_index][3];
+							pointToModify_Bbox = modify_BotRight;
+						}
+					}
+					modifDone = true;
+				}
+				if(pointToModify_Bbox==modify_TopRight && !modifDone){
+					if(loc.x<bboxs[selectedBbox_index][2]){
+						if(loc.y<bboxs[selectedBbox_index][3]){
+							bboxs[selectedBbox_index][2] = loc.x;
+							bboxs[selectedBbox_index][3] = loc.y;
+							bboxs[selectedBbox_index][4] = old_X-loc.x;
+							bboxs[selectedBbox_index][5] = old_H + (old_Y-loc.y);
+							pointToModify_Bbox = modify_TopLeft;
+						}else if(loc.y>=bboxs[selectedBbox_index][3] && loc.y<bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = loc.x;
+							bboxs[selectedBbox_index][3] = loc.y;
+							bboxs[selectedBbox_index][4] = old_X-loc.x;
+							bboxs[selectedBbox_index][5] = old_H + (old_Y-loc.y);
+							pointToModify_Bbox = modify_TopLeft;
+						}else if(loc.y>=bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = loc.x;
+							bboxs[selectedBbox_index][3] = old_Y+old_H;
+							bboxs[selectedBbox_index][4] = old_X-loc.x;
+							bboxs[selectedBbox_index][5] = loc.y-(old_Y+old_H);
+							pointToModify_Bbox = modify_BotLeft;
+						}
+					}else if(loc.x>=bboxs[selectedBbox_index][2] && loc.x<bboxs[selectedBbox_index][2]+bboxs[selectedBbox_index][4]){
+						if(loc.y<bboxs[selectedBbox_index][3]){
+							bboxs[selectedBbox_index][2] = old_X;
+							bboxs[selectedBbox_index][3] = loc.y;
+							bboxs[selectedBbox_index][4] = loc.x-old_X;
+							bboxs[selectedBbox_index][5] = old_H+old_Y-loc.y;
+							pointToModify_Bbox = modify_TopRight;
+						}else if(loc.y>=bboxs[selectedBbox_index][3] && loc.y<bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = old_X;
+							bboxs[selectedBbox_index][3] = loc.y;
+							bboxs[selectedBbox_index][4] = loc.x-old_X;
+							bboxs[selectedBbox_index][5] = old_H+old_Y-loc.y;
+							pointToModify_Bbox = modify_TopRight;
+						}else if(loc.y>=bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = old_X;
+							bboxs[selectedBbox_index][3] = old_Y+old_H;
+							bboxs[selectedBbox_index][4] = loc.x-old_X;
+							bboxs[selectedBbox_index][5] = loc.y-(old_H+old_Y);
+							pointToModify_Bbox = modify_BotRight;
+						}
+					}else if(loc.x>=bboxs[selectedBbox_index][2]+bboxs[selectedBbox_index][4]){
+						if(loc.y<bboxs[selectedBbox_index][3]){
+							bboxs[selectedBbox_index][2] = old_X;
+							bboxs[selectedBbox_index][3] = loc.y;
+							bboxs[selectedBbox_index][4] = loc.x-old_X;
+							bboxs[selectedBbox_index][5] = old_H+old_Y-loc.y;
+							pointToModify_Bbox = modify_TopRight;
+						}else if(loc.y>=bboxs[selectedBbox_index][3] && loc.y<bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = old_X;
+							bboxs[selectedBbox_index][3] = loc.y;
+							bboxs[selectedBbox_index][4] = loc.x-old_X;
+							bboxs[selectedBbox_index][5] = old_H+old_Y-loc.y;
+							pointToModify_Bbox = modify_TopRight;
+						}else if(loc.y>=bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = old_X;
+							bboxs[selectedBbox_index][3] = old_Y+old_H;
+							bboxs[selectedBbox_index][4] = loc.x-old_X;
+							bboxs[selectedBbox_index][5] = loc.y-(old_H+old_Y);
+							pointToModify_Bbox = modify_BotRight;
+						}
+					}
+					modifDone = true;
+				}
+				if(pointToModify_Bbox==modify_BotLeft && !modifDone){
+					if(loc.x<bboxs[selectedBbox_index][2]){
+						if(loc.y<bboxs[selectedBbox_index][3]){
+							bboxs[selectedBbox_index][2] = loc.x;
+							bboxs[selectedBbox_index][3] = loc.y;
+							bboxs[selectedBbox_index][4] = old_W+(old_X-loc.x);
+							bboxs[selectedBbox_index][5] = old_Y-loc.y;
+							pointToModify_Bbox = modify_TopLeft;
+						}else if(loc.y>=bboxs[selectedBbox_index][3] && loc.y<bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = loc.x;
+							bboxs[selectedBbox_index][3] = old_Y;
+							bboxs[selectedBbox_index][4] = old_W+(old_X-loc.x);
+							bboxs[selectedBbox_index][5] = loc.y-old_Y;
+							pointToModify_Bbox = modify_BotLeft;
+						}else if(loc.y>=bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = loc.x;
+							bboxs[selectedBbox_index][3] = old_Y;
+							bboxs[selectedBbox_index][4] = old_W+(old_X-loc.x);
+							bboxs[selectedBbox_index][5] = loc.y-old_Y;
+							pointToModify_Bbox = modify_BotLeft;
+						}
+					}else if(loc.x>=bboxs[selectedBbox_index][2] && loc.x<bboxs[selectedBbox_index][2]+bboxs[selectedBbox_index][4]){
+						if(loc.y<bboxs[selectedBbox_index][3]){
+							bboxs[selectedBbox_index][2] = loc.x;
+							bboxs[selectedBbox_index][3] = loc.y;
+							bboxs[selectedBbox_index][4] = old_W+(old_X-loc.x);
+							bboxs[selectedBbox_index][5] = old_Y-loc.y;
+							pointToModify_Bbox = modify_TopLeft;
+						}else if(loc.y>=bboxs[selectedBbox_index][3] && loc.y<bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = loc.x;
+							bboxs[selectedBbox_index][3] = old_Y;
+							bboxs[selectedBbox_index][4] = old_W+(old_X-loc.x);
+							bboxs[selectedBbox_index][5] = loc.y-old_Y;
+							pointToModify_Bbox = modify_BotLeft;
+						}else if(loc.y>=bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = loc.x;
+							bboxs[selectedBbox_index][3] = old_Y;
+							bboxs[selectedBbox_index][4] = old_W+(old_X-loc.x);
+							bboxs[selectedBbox_index][5] = loc.y-old_Y;
+							pointToModify_Bbox = modify_BotLeft;
+						}
+					}else if(loc.x>=bboxs[selectedBbox_index][2]+bboxs[selectedBbox_index][4]){
+						if(loc.y<bboxs[selectedBbox_index][3]){
+							bboxs[selectedBbox_index][2] = old_X+old_W;
+							bboxs[selectedBbox_index][3] = loc.y;
+							bboxs[selectedBbox_index][4] = loc.x-(old_X+old_W);
+							bboxs[selectedBbox_index][5] = old_Y-loc.y;
+							pointToModify_Bbox = modify_TopRight;
+						}else if(loc.y>=bboxs[selectedBbox_index][3] && loc.y<bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = old_X+old_W;
+							bboxs[selectedBbox_index][3] = old_Y;
+							bboxs[selectedBbox_index][4] = loc.x-bboxs[selectedBbox_index][2];
+							bboxs[selectedBbox_index][5] = loc.y-bboxs[selectedBbox_index][3];
+							pointToModify_Bbox = modify_BotRight;
+						}else if(loc.y>=bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = old_X+old_W;
+							bboxs[selectedBbox_index][3] = old_Y;
+							bboxs[selectedBbox_index][4] = loc.x-bboxs[selectedBbox_index][2];
+							bboxs[selectedBbox_index][5] = loc.y-bboxs[selectedBbox_index][3];
+							pointToModify_Bbox = modify_BotRight;
+						}
+					}
+					modifDone = true;
+				}
+				if(pointToModify_Bbox==modify_BotRight && !modifDone){
+					if(loc.x<bboxs[selectedBbox_index][2]){
+						if(loc.y<bboxs[selectedBbox_index][3]){
+							bboxs[selectedBbox_index][2] = loc.x;
+							bboxs[selectedBbox_index][3] = loc.y;
+							bboxs[selectedBbox_index][4] = old_X-loc.x;
+							bboxs[selectedBbox_index][5] = old_Y-loc.y;
+							pointToModify_Bbox = modify_TopLeft;
+						}else if(loc.y>=bboxs[selectedBbox_index][3] && loc.y<bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = loc.x;
+							bboxs[selectedBbox_index][3] = old_Y;
+							bboxs[selectedBbox_index][4] = old_X-loc.x;
+							bboxs[selectedBbox_index][5] = loc.y-old_Y;
+							pointToModify_Bbox = modify_BotLeft;
+						}else if(loc.y>=bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = loc.x;
+							bboxs[selectedBbox_index][3] = old_Y;
+							bboxs[selectedBbox_index][4] = old_X-loc.x;
+							bboxs[selectedBbox_index][5] = loc.y-old_Y;
+							pointToModify_Bbox = modify_BotLeft;
+						}
+					}else if(loc.x>=bboxs[selectedBbox_index][2] && loc.x<bboxs[selectedBbox_index][2]+bboxs[selectedBbox_index][4]){
+						if(loc.y<bboxs[selectedBbox_index][3]){
+							bboxs[selectedBbox_index][2] = old_X;
+							bboxs[selectedBbox_index][3] = loc.y;
+							bboxs[selectedBbox_index][4] = loc.x-old_X;
+							bboxs[selectedBbox_index][5] = old_Y-loc.y;
+							pointToModify_Bbox = modify_TopRight;
+						}else if(loc.y>=bboxs[selectedBbox_index][3] && loc.y<bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = old_X;
+							bboxs[selectedBbox_index][3] = old_Y;
+							bboxs[selectedBbox_index][4] = loc.x-old_X;
+							bboxs[selectedBbox_index][5] = loc.y-old_Y;
+							pointToModify_Bbox = modify_BotRight;
+						}else if(loc.y>=bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = old_X;
+							bboxs[selectedBbox_index][3] = old_Y;
+							bboxs[selectedBbox_index][4] = loc.x-old_X;
+							bboxs[selectedBbox_index][5] = loc.y-old_Y;
+							pointToModify_Bbox = modify_BotRight;
+						}
+					}else if(loc.x>=bboxs[selectedBbox_index][2]+bboxs[selectedBbox_index][4]){
+						if(loc.y<bboxs[selectedBbox_index][3]){
+							bboxs[selectedBbox_index][2] = old_X;
+							bboxs[selectedBbox_index][3] = loc.y;
+							bboxs[selectedBbox_index][4] = loc.x-old_X;
+							bboxs[selectedBbox_index][5] = old_Y-loc.y;
+							pointToModify_Bbox = modify_TopRight;
+						}else if(loc.y>=bboxs[selectedBbox_index][3] && loc.y<bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = old_X;
+							bboxs[selectedBbox_index][3] = old_Y;
+							bboxs[selectedBbox_index][4] = loc.x-old_X;
+							bboxs[selectedBbox_index][5] = loc.y-old_Y;
+							pointToModify_Bbox = modify_BotRight;
+						}else if(loc.y>=bboxs[selectedBbox_index][3]+bboxs[selectedBbox_index][5]){
+							bboxs[selectedBbox_index][2] = old_X;
+							bboxs[selectedBbox_index][3] = old_Y;
+							bboxs[selectedBbox_index][4] = loc.x-old_X;
+							bboxs[selectedBbox_index][5] = loc.y-old_Y;
+							pointToModify_Bbox = modify_BotRight;
+						}
+					}
+					modifDone = true;
+				}
+			}
 			ActualizeDrawing(e);
 		}
 	}
+	ActualizeDrawing(e);
 };
 canvas.onmousedown = function (e) {
 	if(GetCurrentMode()==mode_ANNOTATION){
-		if(configs.length>0){
+		if(configs.length>0 && current_name!=""){
 			var mouseClickType = e.button;
 			isMouseDown = true;
 			if(mouseClickType==0){//left
@@ -135,45 +431,85 @@ canvas.onmousedown = function (e) {
 		if(mouseClickType==0){//left
 			var loc = windowToCanvas(canvas, e.clientX, e.clientY);
 			if(GetCurrentAnnotationType()==type_MASK){
-				var found = false;
-				for(var i=0;i<masks.length;i++){
-					var mask = masks[i];
-					if(IsInBBox(loc.x,loc.y,CalculateBbox(mask))){
-						masks.push(mask);
-						masks.splice(i,1);
-						selectedMask_index = masks.length-1;
-						ActualizeDrawing(e);
-						found = true;
-						break;
+				if(selectedMask_index!=-1 && selectedMask_index<masks.length){
+					var mask = masks[selectedMask_index];
+					var found = false;
+					for(var i=0;i<mask[2].length;i++){
+						if(IsInBBox(loc.x,loc.y,[mask[2][i]-6,mask[3][i]-6,13,13])){
+							modifying_point = true;
+							found = true;
+							pointIndex_Mask = i;
+							break;
+						}
 					}
 				}
-				if(!found){
-					selectedMask_index=-1;
-					ActualizeDrawing(e);
-				}				
+				if(!modifying_point && pointIndex_Mask==-1){
+					var found = false;
+					for(var i=0;i<masks.length;i++){
+						var mask = masks[i];
+						if(IsInBBox(loc.x,loc.y,CalculateBbox(mask))){
+							masks.push(mask);
+							masks.splice(i,1);
+							selectedMask_index = masks.length-1;
+							ActualizeDrawing(e);
+							found = true;
+							break;
+						}
+					}
+					if(!found){
+						selectedMask_index=-1;
+						ActualizeDrawing(e);
+					}
+				}
 			}
 			if(GetCurrentAnnotationType()==type_BBOX){
-				var found = false;
-				for(var i=0;i<bboxs.length;i++){
-					var bbox = bboxs[i];
-					if(IsInBBox(loc.x,loc.y,[bbox[2],bbox[3],bbox[4],bbox[5]])){
-						bboxs.push(bbox);
-						bboxs.splice(i,1);
-						selectedBbox_index = bboxs.length-1;
-						ActualizeDrawing(e);
-						found = true;
-						break;
+				if(selectedBbox_index!=-1 && selectedBbox_index<bboxs.length){
+					var bbox = bboxs[selectedBbox_index];
+					//Top-left
+					if(IsInBBox(loc.x, loc.y,[bbox[2]-6,bbox[3]-6,13,13])){
+						modifying_point = true;
+						pointToModify_Bbox=modify_TopLeft;
+					}
+					//Top-right
+					if(IsInBBox(loc.x, loc.y,[bbox[2]+bbox[4]-6,bbox[3]-6,13,13])){
+						modifying_point = true;
+						pointToModify_Bbox=modify_TopRight;
+					}
+					//Bottom-left
+					if(IsInBBox(loc.x, loc.y,[bbox[2]-6,bbox[3]+bbox[5]-6,13,13])){
+						modifying_point = true;
+						pointToModify_Bbox=modify_BotLeft;
+					}
+					//Bottom-right
+					if(IsInBBox(loc.x, loc.y,[bbox[2]+bbox[4]-6,bbox[3]+bbox[5]-6,13,13])){
+						modifying_point = true;
+						pointToModify_Bbox=modify_BotRight;
 					}
 				}
-				if(!found){
-					selectedBbox_index=-1;
-					ActualizeDrawing(e);
+				if(pointToModify_Bbox=="" && !modifying_point){
+					var found = false;
+					for(var i=0;i<bboxs.length;i++){
+						var bbox = bboxs[i];
+						if(IsInBBox(loc.x,loc.y,[bbox[2],bbox[3],bbox[4],bbox[5]])){
+							bboxs.push(bbox);
+							bboxs.splice(i,1);
+							selectedBbox_index = bboxs.length-1;
+							ActualizeDrawing(e);
+							found = true;
+							break;
+						}
+					}
+					if(!found){
+						selectedBbox_index=-1;
+						ActualizeDrawing(e);
+					}
 				}
 			}
 			}else if(mouseClickType==1){//mid
 			}else if(mouseClickType==2){//right
 		}
 	}
+	ActualizeDrawing(e);
 };
 
 function CalculateBbox(mask){
@@ -203,6 +539,8 @@ function CalculateBbox(mask){
 function ResetSelection(){
 	selectedMask_index = -1;
 	selectedBbox_index = -1;
+	modifying_point = false;
+	pointToModify_Bbox = "";
 	RefreshDrawing();
 }
 
@@ -555,6 +893,14 @@ function handleImage(e){
     reader.readAsDataURL(e.target.files[0]);     
 }
 
+function reinitConfig(){
+	configs=[];
+	const myNode = document.getElementById("configdiv");
+	while (myNode.firstChild) {
+		myNode.removeChild(myNode.firstChild);
+	}
+}
+
 //Fonction pour charger une config unique et la load directement dans le canvas
 function handleConfig(e){
     var reader = new FileReader();
@@ -562,6 +908,7 @@ function handleConfig(e){
 		var texte = event.target.result;
 		var json = JSON.parse(texte);
 		var count = 0;
+		reinitConfig();
 		for(var labelKey in json.labels){
 			var label = json.labels[labelKey];
 			var bouton = document.createElement("button");
