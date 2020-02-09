@@ -909,6 +909,7 @@ function handleConfig(e){
 		var json = JSON.parse(texte);
 		var count = 0;
 		reinitConfig();
+		reinit();
 		for(var labelKey in json.labels){
 			var label = json.labels[labelKey];
 			var bouton = document.createElement("button");
