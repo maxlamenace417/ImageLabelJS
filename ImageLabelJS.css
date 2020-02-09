@@ -1,0 +1,31 @@
+canvas{
+	background-color:blue;
+}
+#maindiv{
+    display: flex;
+}
+#localizationdiv{
+	display: flex;
+}
+#configdiv{
+	width:200px;
+	margin-right:10px;
+}
+#localization{
+	margin-right:10px;
+}
+#configdiv button{
+	width:100%;
+	margin-bottom:2px;
+	font-weight: bold;
+}
+#configdiv button:hover{
+	background-color: white;
+}
+#menu{
+	margin-bottom:10px;
+	display:flex;
+}
+#imageLoader{
+	margin-right:10px;
+}

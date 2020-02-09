@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>ImageLabelJS</title>
+		<link rel="stylesheet" type="text/css" href="ImageLabelJS.css">
+		
+	</head>
+	<body>
+		<div id="menu">
+			IMAGE
+			<input type="file" id="imageLoader" name="imageLoader"/>
+			CONFIG
+			<input type="file" id="configLoader" name="configLoader"/>
+			<input type="radio" id="mask" name="annotation_type" value="MASK" checked onclick="RefreshDrawing()">
+			<label for="mask">MASK</label>
+			<input type="radio" id="bbox" name="annotation_type" value="BBOX" onclick="RefreshDrawing()">
+			<label for="bbox">BBOX</label>
+			<input type="radio" id="annotation" name="mode" value="ANNOTATION" checked onclick="ResetSelection()">
+			<label for="mask">Annotation</label>
+			<input type="radio" id="delete" name="mode" value="DELETE" onclick="ResetSelection()">
+			<label for="bbox">Delete</label>
+		</div>
+		<div id="maindiv">		
+			<div id="configdiv">
+			</div>
+			<div id="canvas_loc_div">
+				<div id="localizationdiv">
+					<div id="localization">Position:</div>
+					<div id="configdisp">Label:</div>
+				</div>
+				<div id="actionDiv">
+					<button onclick="ValidateAnnotation()">Validate Annotation</button>
+					<button onclick="RemoveLast()">Remove Last Point</button>
+					<button onclick="RemoveAll()">Remove All Points</button>
+					<button onclick="RemoveLastMask()">Remove Last Mask</button>
+					<button onclick="RemoveLastBBox()">Remove Last BBox</button>
+					<button onclick="RemoveSelection()">Remove Selection</button>
+					<button onclick="Clear()">Clear Annotations</button>
+				</div>
+				<div>
+					<canvas id="imageCanvas" width="0" height="0"></canvas>
+				</div>
+			</div>
+		</div>
+	</body>
+	<script type="text/javascript" src="ImageLabelJS.js"></script>
+</html> 
