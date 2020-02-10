@@ -68,6 +68,26 @@ function reinit(){
 	RefreshDrawing();
 }
 
+function reinitPartial(){
+    current_pointsX=[];
+	current_pointsY=[];
+	mouseDown_X = 0;
+	mouseDown_Y = 0;
+	mouseMove_X = 0;
+	mouseMove_Y = 0;
+	current_bbox_X=0;
+	current_bbox_Y=0;
+	current_bbox_W=0;
+	current_bbox_H=0;
+	masks = [];  //[current_RGB, current_id, current_pointsX, current_pointsY, current_name]
+	bboxs = [];  //[current_RGB, current_id, current_bbox_X, current_bbox_Y, current_bbox_W, current_bbox_H, current_name]
+	isMouseDown = false;
+	selectedMask_index = -1;
+	selectedBbox_index = -1;
+	RefreshDrawing();
+}
+
+
 //CANVAS EVENT
 canvas.onmouseup = function(e){
 	if(GetCurrentMode()==mode_ANNOTATION){
@@ -924,7 +944,7 @@ function handleImage(e){
             canvas.height = img.height;
             context.drawImage(img,0,0);
 			ImageInCanvas = img;
-			reinit();
+			reinitPartial();
         }
         img.src = event.target.result;		
     }
