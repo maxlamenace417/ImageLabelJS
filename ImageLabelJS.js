@@ -520,7 +520,7 @@ function SaveToJSON(){
 		var _height = canvas.height;
 		var _annotations = [];
 		for(var i=0;i<bboxs.length;i++){
-			_annotations.push({"xmin":bboxs[i][2], "ymin":bboxs[i][3], "xmax":bboxs[i][2]+bboxs[i][4], "ymax":bboxs[i][3]+bboxs[i][5]});
+			_annotations.push({"label":masks[i][6], "xmin":bboxs[i][2], "ymin":bboxs[i][3], "xmax":bboxs[i][2]+bboxs[i][4], "ymax":bboxs[i][3]+bboxs[i][5]});
 		}
 		var _json = JSON.stringify({"image":_image,"width":_width,"height":_height,"annotations":_annotations});
 		var _fileName = _image.split('.')[0];
