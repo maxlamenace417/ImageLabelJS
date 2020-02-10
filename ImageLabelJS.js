@@ -5,6 +5,7 @@ configLoader.addEventListener('change', handleConfig, false);
 var canvas = document.getElementById('imageCanvas');
 var context = canvas.getContext('2d');
 var ImageInCanvas = new Image();
+var ImageName = "";
 
 var current_RGB=[];
 var current_id=0;
@@ -512,6 +513,43 @@ canvas.onmousedown = function (e) {
 	ActualizeDrawing(e);
 };
 
+function SaveToJSON(){
+	if(GetCurrentAnnotationType()==type_BBOX && bboxs.length>0){
+		var _image = ImageName;
+		var _width = canvas.width;
+		var _height = canvas.height;
+		var _annotations = [];
+		for(var i=0;i<bboxs.length;i++){
+			_annotations.push({"xmin":bboxs[i][2], "ymin":bboxs[i][3], "xmax":bboxs[i][2]+bboxs[i][4], "ymax":bboxs[i][3]+bboxs[i][5]});
+		}
+		var _json = JSON.stringify({"image":_image,"width":_width,"height":_height,"annotations":_annotations});
+		var _fileName = _image.split('.')[0];
+		downloadObjectAsJson(_json,_fileName);
+	}
+	if(GetCurrentAnnotationType()==type_MASK && masks.length>0){
+		var _image = ImageName;
+		var _width = canvas.width;
+		var _height = canvas.height;
+		var _annotations = [];
+		for(var i=0;i<masks.length;i++){
+			_annotations.push({"label":masks[i][4], "x":masks[i][2], "y":masks[i][3]});
+		}
+		var _json = JSON.stringify({"image":_image,"width":_width,"height":_height,"annotations":_annotations});
+		var _fileName = _image.split('.')[0];
+		downloadObjectAsJson(_json,_fileName);
+	}
+}
+
+function downloadObjectAsJson(exportObj, exportName){
+	var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(exportObj);
+	var downloadAnchorNode = document.createElement('a');
+	downloadAnchorNode.setAttribute("href",     dataStr);
+	downloadAnchorNode.setAttribute("download", exportName + ".json");
+	document.body.appendChild(downloadAnchorNode); // required for firefox
+	downloadAnchorNode.click();
+	downloadAnchorNode.remove();
+}
+
 function CalculateBbox(mask){
 	var bbox_Xmin = 100000000;
 	var bbox_Ymin = 100000000;
@@ -888,8 +926,10 @@ function handleImage(e){
 			ImageInCanvas = img;
 			reinit();
         }
-        img.src = event.target.result;
+        img.src = event.target.result;		
     }
+	ImageName = e.target.value;
+	ImageName = ImageName.replace(/.*[\/\\]/, '');
     reader.readAsDataURL(e.target.files[0]);     
 }
 
